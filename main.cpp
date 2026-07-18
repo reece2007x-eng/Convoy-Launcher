@@ -129,44 +129,74 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         HDC hdc = (HDC)wp;
         RECT rc; GetClientRect(hwnd, &rc);
         FillRect(hdc, &rc, g_bgBrush);
-        RECT panel = { 0, 220, rc.right, rc.bottom };
+
+        // Bottom panel
+        RECT panel = { 0, rc.bottom - 180, rc.right, rc.bottom };
         FillRect(hdc, &panel, g_panelBrush);
+
+        // Amber accent line at top
         RECT accent = { 0, 0, rc.right, 4 };
         HBRUSH ab = CreateSolidBrush(CLR_AMBER);
         FillRect(hdc, &accent, ab);
         DeleteObject(ab);
+
+        // Amber accent line above panel
+        RECT accentPanel = { 0, rc.bottom - 180, rc.right, rc.bottom - 178 };
+        HBRUSH ab2 = CreateSolidBrush(CLR_AMBER);
+        FillRect(hdc, &accentPanel, ab2);
+        DeleteObject(ab2);
+
         return 1;
     }
 
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc; GetClientRect(hwnd, &rc);
 
+        // CONVOY title
         SelectObject(hdc, g_fontTitle);
         SetTextColor(hdc, CLR_WHITE);
         SetBkMode(hdc, TRANSPARENT);
-        TextOutW(hdc, 36, 24, L"CONVOY", 6);
+        TextOutW(hdc, 60, 40, L"CONVOY", 6);
 
+        // Amber dot
         HBRUSH amb = CreateSolidBrush(CLR_AMBER);
-        RECT dot = { 152, 34, 160, 42 };
+        RECT dot = { 220, 54, 230, 64 };
         FillRect(hdc, &dot, amb);
         DeleteObject(amb);
 
+        // Subtitle
         SelectObject(hdc, g_fontBody);
         SetTextColor(hdc, CLR_CHROME);
-        TextOutW(hdc, 36, 76, L"Multiplayer for Euro Truck Simulator 2", 38);
+        TextOutW(hdc, 60, 110, L"Multiplayer for Euro Truck Simulator 2", 38);
 
+        // Version
         SelectObject(hdc, g_fontMono);
         SetTextColor(hdc, CLR_CHROME);
-        TextOutW(hdc, 36, 100, L"v0.1.0-alpha", 12);
+        TextOutW(hdc, 60, 140, L"v0.1.1-alpha", 12);
 
+        // Divider
         HPEN pen = CreatePen(PS_SOLID, 1, RGB(42,46,53));
         SelectObject(hdc, pen);
-        MoveToEx(hdc, 0, 138, nullptr);
-        LineTo(hdc, 600, 138);
+        MoveToEx(hdc, 0, 180, nullptr);
+        LineTo(hdc, rc.right, 180);
         DeleteObject(pen);
 
         EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (g_btnPlay && g_btnWeb && g_lblStatus && g_lblUser) {
+            RECT rc; GetClientRect(hwnd, &rc);
+            int panelTop = rc.bottom - 170;
+
+            SetWindowPos(g_lblUser, nullptr, 60, 195, rc.right - 120, 26, SWP_NOZORDER);
+            SetWindowPos(g_lblStatus, nullptr, 60, panelTop + 20, rc.right - 120, 26, SWP_NOZORDER);
+            SetWindowPos(g_btnPlay, nullptr, 60, panelTop + 60, 240, 72, SWP_NOZORDER);
+            SetWindowPos(g_btnWeb, nullptr, 320, panelTop + 76, 180, 40, SWP_NOZORDER);
+        }
         return 0;
     }
 
@@ -180,11 +210,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             break;
         case IDC_BTN_WEBSITE:
             ShellExecuteW(nullptr, L"open",
-                L"https://codepen.io/YOUR_CODEPEN_URL",
+                L"https://codepen.io/luke134/pen/bNgaGOv",
                 nullptr, nullptr, SW_SHOW);
             break;
         }
         break;
+
+    case WM_GETMINMAXINFO: {
+        MINMAXINFO* mmi = (MINMAXINFO*)lp;
+        mmi->ptMinTrackSize.x = 600;
+        mmi->ptMinTrackSize.y = 400;
+        return 0;
+    }
 
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -194,36 +231,44 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 void CreateControls(HWND hwnd) {
-    g_fontTitle = CreateFontW(44, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    g_fontTitle = CreateFontW(64, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Arial");
-    g_fontBody = CreateFontW(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    g_fontBody = CreateFontW(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
-    g_fontMono = CreateFontW(13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    g_fontMono = CreateFontW(14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Consolas");
 
+    RECT rc; GetClientRect(hwnd, &rc);
+    int panelTop = rc.bottom - 170;
+
     g_lblUser = CreateWindowExW(0, L"STATIC", L"Not logged in",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
-        36, 152, 400, 22, hwnd, (HMENU)IDC_LABEL_USER, nullptr, nullptr);
+        60, 195, rc.right - 120, 26,
+        hwnd, (HMENU)IDC_LABEL_USER, nullptr, nullptr);
     SendMessageW(g_lblUser, WM_SETFONT, (WPARAM)g_fontBody, TRUE);
 
     g_lblStatus = CreateWindowExW(0, L"STATIC", L"Ready.",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
-        36, 238, 520, 22, hwnd, (HMENU)IDC_LABEL_STATUS, nullptr, nullptr);
+        60, panelTop + 20, rc.right - 120, 26,
+        hwnd, (HMENU)IDC_LABEL_STATUS, nullptr, nullptr);
     SendMessageW(g_lblStatus, WM_SETFONT, (WPARAM)g_fontMono, TRUE);
 
     g_btnPlay = CreateWindowExW(0, L"BUTTON", L"PLAY",
         WS_CHILD | WS_VISIBLE | BS_FLAT | BS_PUSHBUTTON,
-        36, 278, 200, 52, hwnd, (HMENU)IDC_BTN_PLAY, nullptr, nullptr);
+        60, panelTop + 60, 240, 72,
+        hwnd, (HMENU)IDC_BTN_PLAY, nullptr, nullptr);
     SendMessageW(g_btnPlay, WM_SETFONT, (WPARAM)g_fontTitle, TRUE);
 
     g_btnWeb = CreateWindowExW(0, L"BUTTON", L"Open website",
         WS_CHILD | WS_VISIBLE | BS_FLAT | BS_PUSHBUTTON,
-        252, 290, 140, 30, hwnd, (HMENU)IDC_BTN_WEBSITE, nullptr, nullptr);
+        320, panelTop + 76, 180, 40,
+        hwnd, (HMENU)IDC_BTN_WEBSITE, nullptr, nullptr);
     SendMessageW(g_btnWeb, WM_SETFONT, (WPARAM)g_fontBody, TRUE);
 
+    // Startup check thread
     std::thread([](){
         SetStatus(L"Checking for updates...", CLR_CHROME);
         Sleep(600);
@@ -257,26 +302,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     wc.hIcon         = LoadIcon(hInstance, IDI_APPLICATION);
     RegisterClassExW(&wc);
 
+    int screenW = GetSystemMetrics(SM_CXSCREEN);
+    int screenH = GetSystemMetrics(SM_CYSCREEN);
+
     g_hwnd = CreateWindowExW(
         WS_EX_APPWINDOW, L"ConvoyLauncher", L"Convoy Launcher",
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-        CW_USEDEFAULT, CW_USEDEFAULT, 600, 400,
+        WS_OVERLAPPEDWINDOW,
+        0, 0, screenW, screenH,
         nullptr, nullptr, hInstance, nullptr);
 
     CreateControls(g_hwnd);
-    ShowWindow(g_hwnd, nCmdShow);
+    ShowWindow(g_hwnd, SW_MAXIMIZE);
     UpdateWindow(g_hwnd);
 
     MSG msg;
-    while (GetMessageW(&msg, nullptr, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
-    }
-
-    DeleteObject(g_bgBrush);
-    DeleteObject(g_panelBrush);
-    DeleteObject(g_fontTitle);
-    DeleteObject(g_fontBody);
-    DeleteObject(g_fontMono);
-    return (int)msg.wParam;
-}
+    while (GetMessageW(&msg, nullptr, 0,
