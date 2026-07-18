@@ -127,71 +127,55 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
     case WM_ERASEBKGND: {
         HDC hdc = (HDC)wp;
-        RECT rc; GetClientRect(hwnd, &rc);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
         FillRect(hdc, &rc, g_bgBrush);
-
-        // Bottom panel
         RECT panel = { 0, rc.bottom - 180, rc.right, rc.bottom };
         FillRect(hdc, &panel, g_panelBrush);
-
-        // Amber accent line at top
         RECT accent = { 0, 0, rc.right, 4 };
         HBRUSH ab = CreateSolidBrush(CLR_AMBER);
         FillRect(hdc, &accent, ab);
         DeleteObject(ab);
-
-        // Amber accent line above panel
         RECT accentPanel = { 0, rc.bottom - 180, rc.right, rc.bottom - 178 };
         HBRUSH ab2 = CreateSolidBrush(CLR_AMBER);
         FillRect(hdc, &accentPanel, ab2);
         DeleteObject(ab2);
-
         return 1;
     }
 
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
-        RECT rc; GetClientRect(hwnd, &rc);
-
-        // CONVOY title
+        RECT rc;
+        GetClientRect(hwnd, &rc);
         SelectObject(hdc, g_fontTitle);
         SetTextColor(hdc, CLR_WHITE);
         SetBkMode(hdc, TRANSPARENT);
         TextOutW(hdc, 60, 40, L"CONVOY", 6);
-
-        // Amber dot
         HBRUSH amb = CreateSolidBrush(CLR_AMBER);
         RECT dot = { 220, 54, 230, 64 };
         FillRect(hdc, &dot, amb);
         DeleteObject(amb);
-
-        // Subtitle
         SelectObject(hdc, g_fontBody);
         SetTextColor(hdc, CLR_CHROME);
         TextOutW(hdc, 60, 110, L"Multiplayer for Euro Truck Simulator 2", 38);
-
-        // Version
         SelectObject(hdc, g_fontMono);
         SetTextColor(hdc, CLR_CHROME);
-        TextOutW(hdc, 60, 140, L"v0.1.1-alpha", 12);
-
-        // Divider
+        TextOutW(hdc, 60, 140, L"v0.1.2-alpha", 12);
         HPEN pen = CreatePen(PS_SOLID, 1, RGB(42,46,53));
         SelectObject(hdc, pen);
         MoveToEx(hdc, 0, 180, nullptr);
         LineTo(hdc, rc.right, 180);
         DeleteObject(pen);
-
         EndPaint(hwnd, &ps);
         return 0;
     }
 
     case WM_SIZE: {
         if (g_btnPlay && g_btnWeb && g_lblStatus && g_lblUser) {
-            RECT rc; GetClientRect(hwnd, &rc);
+            RECT rc;
+            GetClientRect(hwnd, &rc);
             int panelTop = rc.bottom - 170;
-
             SetWindowPos(g_lblUser, nullptr, 60, 195, rc.right - 120, 26, SWP_NOZORDER);
             SetWindowPos(g_lblStatus, nullptr, 60, panelTop + 20, rc.right - 120, 26, SWP_NOZORDER);
             SetWindowPos(g_btnPlay, nullptr, 60, panelTop + 60, 240, 72, SWP_NOZORDER);
@@ -241,7 +225,8 @@ void CreateControls(HWND hwnd) {
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Consolas");
 
-    RECT rc; GetClientRect(hwnd, &rc);
+    RECT rc;
+    GetClientRect(hwnd, &rc);
     int panelTop = rc.bottom - 170;
 
     g_lblUser = CreateWindowExW(0, L"STATIC", L"Not logged in",
@@ -268,7 +253,6 @@ void CreateControls(HWND hwnd) {
         hwnd, (HMENU)IDC_BTN_WEBSITE, nullptr, nullptr);
     SendMessageW(g_btnWeb, WM_SETFONT, (WPARAM)g_fontBody, TRUE);
 
-    // Startup check thread
     std::thread([](){
         SetStatus(L"Checking for updates...", CLR_CHROME);
         Sleep(600);
@@ -316,4 +300,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     UpdateWindow(g_hwnd);
 
     MSG msg;
-    while (GetMessageW(&msg, nullptr, 0,
+    while (GetMessageW(&msg, nullptr, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+
+    DeleteObject(g_bgBrush);
+    DeleteObject(g_panelBrush);
+    DeleteObject(g_fontTitle);
+    DeleteObject(g_fontBody);
+    DeleteObject(g_fontMono);
+    return (int)msg.wParam;
+}
